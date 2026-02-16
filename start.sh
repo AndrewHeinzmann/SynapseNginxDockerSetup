@@ -6,7 +6,7 @@ docker container rm helperTEMP
 
 
 # set servername to replace in confs
-servername''
+servername=$(grep -- '^servername=' .env | awk 'BEGIN {FS="="} {print $2}')
 if [[ -z "$servername" ]]; then
 	echo "servername variable must be set"
 	exit 1
@@ -14,9 +14,9 @@ fi
 
 
 # check if secrets in .env
-formsecret=$(grep -- 'formsecret=' .env | awk 'BEGIN {FS="="} {print $2}')
-macaroonsecret=$(grep -- 'macaroonsecret=' .env | awk 'BEGIN {FS="="} {print $2}')
-registrationsecret=$(grep -- 'registrationsecret=' .env | awk 'BEGIN {FS="="} {print $2}')
+formsecret=$(grep -- '^formsecret=' .env | awk 'BEGIN {FS="="} {print $2}')
+macaroonsecret=$(grep -- '^macaroonsecret=' .env | awk 'BEGIN {FS="="} {print $2}')
+registrationsecret=$(grep -- '^registrationsecret=' .env | awk 'BEGIN {FS="="} {print $2}')
 if [[ -z "$formsecret" ]]; then
 	formsecret="$(cat /dev/urandom | tr -dc "[:alnum:]" | head -c 50)"
 fi
@@ -51,10 +51,10 @@ sed -i "s/REGISTRATIONSECRET/${registrationsecret}/g" ./configs/synapse/homeserv
 docker cp ./configs/synapse/homeserver.yaml.tocopy helperTEMP:/data/ || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
 docker cp ./configs/synapse/homeserver.log.config helperTEMP:/data/ || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
 # copy from letsencrypt file on host, and if running Docker rootless it will change ownership to user, then copy into volume synapse
-sudo cp --update=none "/etc/letsencrypt/live/${servername}/fullchain.pem" ./fullchain.pem
+sudo cp --update=older "/etc/letsencrypt/live/${servername}/fullchain.pem" ./fullchain.pem
 sudo chown "$USER:$USER" fullchain.pem
 docker cp ./fullchain.pem helperTEMP:/data/ || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
-sudo cp --update=none "/etc/letsencrypt/live/${servername}/privkey.pem" ./privkey.pem
+sudo cp --update=older "/etc/letsencrypt/live/${servername}/privkey.pem" ./privkey.pem
 sudo chown "$USER:$USER" privkey.pem
 docker cp ./privkey.pem helperTEMP:/data/ || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
 docker rm helperTEMP
@@ -79,5 +79,8 @@ done
 docker rm helperTEMP
 
 # replace servername in docker-compose.yml, start docker compose
-sed -i "s/INPUTSERVERNAME/${servername}/g" docker-compose.yml
+# check if servername is set in env, if not replace with sed -i
+if [[ -z "$(grep -- '^servername=' .env | awk 'BEGIN {FS="="} {print $2}')" ]]; then
+    sed -i "s/\${servername}/${servername}/g" docker-compose.yml
+fi
 docker compose up -d
