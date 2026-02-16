@@ -17,13 +17,13 @@ fi
 formsecret=$(grep -- 'formsecret=' .env | awk 'BEGIN {FS="="} {print $2}')
 macaroonsecret=$(grep -- 'macaroonsecret=' .env | awk 'BEGIN {FS="="} {print $2}')
 registrationsecret=$(grep -- 'registrationsecret=' .env | awk 'BEGIN {FS="="} {print $2}')
-if -z "$formsecret"; then
+if [[ -z "$formsecret" ]]; then
 	formsecret="$(cat /dev/urandom | tr -dc "[:alnum:]" | head -c 50)"
 fi
-if -z "$macaroonsecret"; then
+if [[ -z "$macaroonsecret" ]]; then
 	macaroonsecret="$(cat /dev/urandom | tr -dc "[:alnum:]" | head -c 50)"
 fi
-if -z "$registrationsecret"; then
+if [[ -z "$registrationsecret" ]]; then
 	registrationsecret="$(cat /dev/urandom | tr -dc "[:alnum:]" | head -c 50)"
 fi
 
