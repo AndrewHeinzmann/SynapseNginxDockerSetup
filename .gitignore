@@ -1,0 +1,6 @@
+.env
+*.tocopy
+*.pem
+*.crt
+*.cert
+*.key

@@ -1,0 +1,53 @@
+services:
+  nginx:
+    image: "nginx:latest"
+    volumes:
+      - nginxConf:/etc/nginx/
+      - nginxConfD:/etc/nginx/conf.d
+      - nginxHTML:/usr/share/nginx/html
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      backend:
+        ipv4_address: 172.30.5.1
+  synapse:
+    image: "matrixdotorg/synapse:latest"
+    environment:
+      SYNAPSE_CONFIG_DIR: "/data"
+      SYNAPSE_DATA_DIR: "/data"
+    #build: 
+      #context: .
+    volumes:
+      - synapse:/data
+    networks:
+      backend:
+        ipv4_address: 172.30.5.2
+    extra_hosts:
+        # this is useful if manually registering an admin account via the command line i.e.: docker exec -it synapse register_new_matrix_user https://INPUTSERVERNAME:8443 -c /data/homeserver.yaml -u user -p password -a
+      - "INPUTSERVERNAME=127.0.0.1"
+volumes:
+  synapse:
+    external: true
+    name: synapse
+  nginxConf:
+    external: true
+    name: nginxConf
+  nginxConfD:
+    external: true
+    name: nginxConfD
+  nginxHTML:
+    external: true
+    name: nginxHTML
+networks:
+  backend:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.5.0/24
+          #ip_range: 172.30.5.0/24
+          gateway: 172.30.5.254
+          #aux_addresses:
+            #nginx: 172.30.5.1
+            #synapse: 172.30.5.2
