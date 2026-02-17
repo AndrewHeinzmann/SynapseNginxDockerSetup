@@ -109,4 +109,4 @@ if [[ -z "$(grep -- '^servername=' .env | awk 'BEGIN {FS="="} {print $2}')" ]]; 
     sed -i "s/\${servername}/${servername}/g" docker-compose.yml
 fi
 echo "Starting Docker"
-docker compose up -d
+docker compose up -d --force-recreate
