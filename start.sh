@@ -3,6 +3,27 @@
 sudo -l &> /dev/null || { echo "Requires Sudo Privileges"; exit 1; }
 # reset helper container in case of prior failure
 docker container rm helperTEMP
+# ugly if expression, the container ls returns the current directory-synapse|nginx-1 (ignoring different indexes)
+# and tr is needed to lowercase because docker compose does that to the directory
+if docker container ls -a --format='{{.Names}}' | grep -q "$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]')-synapse-1"; then
+    synapseExitCode="$(docker container inspect "$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]')-synapse-1" --format='{{.State.ExitCode}}')"
+    echo "Existing Synapse Container Found"
+    echo "synapseExitCode: ${synapseExitCode}"
+fi
+if docker container ls -a --format='{{.Names}}' | grep -q "$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]')-nginx-1"; then
+    nginxExitCode="$(docker container inspect "$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]')-nginx-1" --format='{{.State.ExitCode}}')"
+    echo "Existing Nginx Container Found"
+    echo "nginxExitCode: ${nginxExitCode}"
+fi
+if [[ ${synapseExitCode} && ${nginxExitCode} ]]; then
+        echo -n "The containers seem healthy. Are you sure you want to rebuild? (y/n) "
+        prompt='n'
+        read -r prompt
+        if [[ "${prompt,,}" != "y" ]]; then
+                echo "Exiting"
+                exit 0
+        fi
+fi
 
 
 # set servername to replace in confs
@@ -29,10 +50,12 @@ fi
 
 
 # create volumes
-docker volume create synapse &> /dev/null || { echo "Failed To Create Volume: synapse"; exit 1; }
-docker volume create nginxConf &> /dev/null || { echo "Failed To Create Volume: nginxConf"; exit 1; }
-docker volume create nginxConfD &> /dev/null || { echo "Failed To Create Volume: nginxConfD"; exit 1; }
-docker volume create nginxHTML &> /dev/null || { echo "Failed To Create Volume: nginxHTML"; exit 1; }
+echo "Creating Volumes or Checking if Existing"
+docker volume create synapse || { echo "Failed To Create Volume: synapse"; exit 1; }
+docker volume create nginxConf || { echo "Failed To Create Volume: nginxConf"; exit 1; }
+docker volume create nginxConfD || { echo "Failed To Create Volume: nginxConfD"; exit 1; }
+docker volume create nginxHTML || { echo "Failed To Create Volume: nginxHTML"; exit 1; }
+echo "Volumes Successfully Created/Already Exist"
 
 
 # need to make a dummy server for temporary challenge
@@ -41,6 +64,7 @@ docker volume create nginxHTML &> /dev/null || { echo "Failed To Create Volume: 
 
 
 # copy synapse homeserver.yaml to corresponding volume, using debian for a helper container to copy to volumes
+echo "Configuring Synapse"
 docker pull debian &> /dev/null || { echo "Cannot Pull debian Docker Image for temp copy"; exit 1; }
 docker run -v synapse:/data --name helperTEMP debian || { echo "Cannot Create Temp Docker Container"; exit 1; }
 # replace placeholders and save to other file called .tocopy, then copy to volume synapse
@@ -62,6 +86,7 @@ docker rm helperTEMP
 docker run -it --rm --mount type=volume,src=synapse,dst=/data debian chown -R 991:991 /data/
 
 # copy .confs for nginx to volumes nginxConfD and nginxConf, replacing placeholders
+echo "Configuring Nginx"
 sed "s/INPUTSERVERNAME/${servername}/g" ./configs/nginxConfD/default.conf > ./configs/nginxConfD/default.conf.tocopy
 sed "s/INPUTSERVERNAME/${servername}/g" ./configs/nginxConfD/synapseForward.conf > ./configs/nginxConfD/synapseForward.conf.tocopy
 docker run -v nginxConfD:/confD --name helperTEMP debian || { echo "Cannot Create Temp Docker Container"; exit 1; }
@@ -83,4 +108,5 @@ docker rm helperTEMP
 if [[ -z "$(grep -- '^servername=' .env | awk 'BEGIN {FS="="} {print $2}')" ]]; then
     sed -i "s/\${servername}/${servername}/g" docker-compose.yml
 fi
+echo "Starting Docker"
 docker compose up -d
