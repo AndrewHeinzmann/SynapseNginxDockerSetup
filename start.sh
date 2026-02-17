@@ -72,8 +72,8 @@ sed "s/INPUTSERVERNAME/${servername}/g" ./configs/synapse/homeserver.yaml > ./co
 sed -i "s/FORMSECRET/${formsecret}/g" ./configs/synapse/homeserver.yaml.tocopy
 sed -i "s/MACAROONSECRET/${macaroonsecret}/g" ./configs/synapse/homeserver.yaml.tocopy 
 sed -i "s/REGISTRATIONSECRET/${registrationsecret}/g" ./configs/synapse/homeserver.yaml.tocopy
-docker cp ./configs/synapse/homeserver.yaml.tocopy helperTEMP:/data/ || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
-docker cp ./configs/synapse/homeserver.log.config helperTEMP:/data/ || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
+docker cp ./configs/synapse/homeserver.yaml.tocopy helperTEMP:/data/homeserver.yaml || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
+docker cp ./configs/synapse/homeserver.log.config helperTEMP:/data/homeserver.log.config || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
 # copy from letsencrypt file on host, and if running Docker rootless it will change ownership to user, then copy into volume synapse
 sudo cp --update=older "/etc/letsencrypt/live/${servername}/fullchain.pem" ./fullchain.pem
 sudo chown "$USER:$USER" fullchain.pem
@@ -90,8 +90,8 @@ echo "Configuring Nginx"
 sed "s/INPUTSERVERNAME/${servername}/g" ./configs/nginxConfD/default.conf > ./configs/nginxConfD/default.conf.tocopy
 sed "s/INPUTSERVERNAME/${servername}/g" ./configs/nginxConfD/synapseForward.conf > ./configs/nginxConfD/synapseForward.conf.tocopy
 docker run -v nginxConfD:/confD --name helperTEMP debian || { echo "Cannot Create Temp Docker Container"; exit 1; }
-docker cp ./configs/nginxConfD/default.conf.tocopy helperTEMP:/confD/ || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
-docker cp ./configs/nginxConfD/synapseForward.conf.tocopy helperTEMP:/confD/ || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
+docker cp ./configs/nginxConfD/default.conf.tocopy helperTEMP:/confD/default.conf || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
+docker cp ./configs/nginxConfD/synapseForward.conf.tocopy helperTEMP:/confD/synapseForward.conf || { echo "Cannot Copy From Config Directory to Volume"; exit 1; }
 docker rm helperTEMP
 # copy cert and key to nginx
 docker run -v nginxConf:/confbasedir --name helperTEMP debian || { echo "Cannot Create Temp Docker Container"; exit 1; }
