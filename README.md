@@ -7,4 +7,3 @@ Assumptions:
 1. Docker is being run as rootless, so it requires the Docker user to have sudo privileges. This currently prevents it from being a userless deployment.
 2. Certificates are already installed by Certbot for LetsEncrypt.
 3. Any stored secrets in .env are simple alphanumeric strings without special characters like quotes.
-4. Server name is manually entered into start.sh (I should really program .env functionality further)
