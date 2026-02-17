@@ -11,6 +11,12 @@ services:
     networks:
       backend:
         ipv4_address: 172.30.5.1
+    healthcheck:
+      test: ["CMD", "service", "nginx", "status"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
   synapse:
     image: "matrixdotorg/synapse:latest"
     environment:
@@ -26,6 +32,12 @@ services:
     extra_hosts:
         # this is useful if manually registering an admin account via the command line i.e.: docker exec -it synapse register_new_matrix_user https://INPUTSERVERNAME:8443 -c /data/homeserver.yaml -u user -p password -a
       - "${servername}=127.0.0.1"
+    healthcheck:
+      test: ["CMD", "curl", "-fSs", "http://localhost:8008/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 volumes:
   synapse:
     external: true
